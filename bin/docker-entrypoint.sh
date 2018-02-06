@@ -119,6 +119,7 @@ email_setup() {
   # EMAIL_AUTH
   # EMAIL_USERNAME
   # EMAIL_PASSWORD
+  # EMAIL_CLIENT
   # EMAIL_TLS
 
   local default_transport='Smtp'
@@ -128,6 +129,7 @@ email_setup() {
   local default_timeout='30'
   local default_username="''"
   local default_password="''"
+  local default_client=null
 
   cp $email_config{.default,}
   sed -i s:$default_transport:${EMAIL_TRANSPORT:-Smtp}:g $email_config
@@ -142,7 +144,9 @@ email_setup() {
   	sed -i "0,/"$default_username"/s:"$default_username":'${EMAIL_USERNAME:-email_user}':" $email_config
 	sed -i "0,/"$default_password"/s:"$default_password":'${EMAIL_PASSWORD:-email_password}':" $email_config
   fi
-  
+  if [ -n "$EMAIL_CLIENT" ] ; then
+    sed -i "0,/'client'/s:'client' => $default_client:'client' => '$EMAIL_CLIENT':" $email_config
+  fi
   sed -i "0,/tls/s:false:${EMAIL_TLS:-false}:" $email_config
 
 }
@@ -175,6 +179,12 @@ php_fpm_setup() {
   sed -i '/^include\s/ s:^:#:' /etc/php5/fpm.d/www.conf
 }
 
+check_permissions() {
+  chown -R nginx:nginx /var/www/passbolt
+  chmod -R +w /var/www/passbolt/app/tmp
+  chmod +w /var/www/passbolt/app/webroot/img/public
+}
+
 email_cron_job() {
   local root_crontab='/etc/crontabs/root'
   local cron_task_dir='/etc/periodic/1min'
@@ -192,38 +202,6 @@ email_cron_job() {
 
   crond -f -c /etc/crontabs &
 }
-
-if [ -f "${secrets_prefix}/${gpg_private_key_file}" ]; then
-    ln -sf $secrets_prefix/$gpg_private_key_file $gpg_private_key
-fi
-
-if [ -f "${secrets_prefix}/${gpg_public_key_file}" ]; then
-    ln -sf $secrets_prefix/$gpg_public_key_file $gpg_public_key
-fi
-
-if [ -f "${secrets_prefix}/${core_config_file}" ]; then
-    ln -sf $secrets_prefix/$core_config_file $core_config
-fi
-
-if [ -f "${secrets_prefix}/${db_config_file}" ]; then
-    ln -sf $secrets_prefix/$db_config_file $db_config
-fi
-
-if [ -f "${secrets_prefix}/${app_config_file}" ]; then
-    ln -sf $secrets_prefix/$app_config_file $app_config
-fi
-
-if [ -f "${secrets_prefix}/${email_config_file}" ]; then
-    ln -sf $secrets_prefix/$email_config_file $email_config
-fi
-
-if [ -f "${secrets_prefix}/${ssl_key_config_file}" ]; then
-    ln -sf $secrets_prefix/$ssl_key_config_file $ssl_key_config
-fi
-
-if [ -f "${secrets_prefix}/${ssl_cert_config_file}" ]; then
-    ln -sf $secrets_prefix/$ssl_cert_config_file $ssl_cert_config
-fi
 
 if [ ! -f $gpg_private_key ] && [ ! -L $gpg_private_key ] || \
    [ ! -f $gpg_public_key ] && [ ! -L $gpg_public_key ]; then
@@ -252,6 +230,8 @@ if [ ! -f $ssl_key ] && [ ! -L $ssl_key ] && \
    [ ! -f $ssl_cert ] && [ ! -L $ssl_cert ]; then
   gen_ssl_cert
 fi
+
+check_permissions
 
 php_fpm_setup
 
