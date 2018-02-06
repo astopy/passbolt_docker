@@ -180,7 +180,6 @@ php_fpm_setup() {
 }
 
 check_permissions() {
-  chown -R nginx:nginx /var/www/passbolt
   chmod -R +w /var/www/passbolt/app/tmp
   chmod +w /var/www/passbolt/app/webroot/img/public
 }
