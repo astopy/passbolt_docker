@@ -45,12 +45,6 @@ gen_ssl_cert() {
 }
 
 install() {
-  tables=$(mysql \
-    -u "${DATASOURCES_DEFAULT_USERNAME:-passbolt}" \
-    -h "${DATASOURCES_DEFAULT_HOST:-localhost}" \
-    -P "${DATASOURCES_DEFAULT_PORT:-3306}" \
-    -BN -e "SHOW TABLES FROM ${DATASOURCES_DEFAULT_DATABASE:-passbolt}" \
-    -p"${DATASOURCES_DEFAULT_PASSWORD:-P4ssb0lt}" |wc -l)
   app_config="/var/www/passbolt/config/app.php"
 
   if [ ! -f "$app_config" ]; then
@@ -62,12 +56,8 @@ install() {
     export PASSBOLT_GPG_SERVER_KEY_FINGERPRINT=$gpg_auto_fingerprint
   fi
 
-  if [ "$tables" -eq 0 ]; then
-    su -c '/var/www/passbolt/bin/cake passbolt install --no-admin --force' -s /bin/bash www-data
-  else
-    su -c '/var/www/passbolt/bin/cake passbolt migrate' -s /bin/bash www-data
-    echo "Enjoy! ☮"
-  fi
+  su -c '/var/www/passbolt/bin/cake passbolt migrate' -s /bin/bash www-data
+  echo "Enjoy! ☮"
 }
 
 email_cron_job() {
